@@ -1,7 +1,18 @@
-# Tauri + React + Typescript
+# Bravimote (Web)
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Also check out the [original web-based version](https://github.com/wxllow/bravimote-web)
 
-## Recommended IDE Setup
+## Features
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+- Available on Windows, macOS, Linux, Android, iOS (TODO)
+- Automatically discover and pair TVs on the local network
+- Full TV remote control functionality
+- Automatic keyboard functionality (TODO)
+- Customizable key bindings (TODO)
+- Customizable UI (TODO)
+- Wake-on-LAN (TODO)
+- \[ANDROID\] Mateiral You Theming (TODO)
+
+## Usage
+
+Download the latest releases from [] and run.

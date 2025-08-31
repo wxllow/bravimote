@@ -36,9 +36,14 @@ import {
 } from 'lucide-react';
 import { Switch } from './components/ui/switch';
 import { Label } from './components/ui/label';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export default function Remote() {
+    const [intervalId, setIntervalId] = useState<number>(0);
+
+    const navigate = useNavigate();
+
     // Settings
     const [advanced, setAdvanced] = useState(
         localStorage.getItem('setting:advanced') === 'true'
@@ -59,11 +64,19 @@ export default function Remote() {
     const psk = params.get('psk') ?? undefined;
 
     if (!hostname) throw new Error('Hostname is required');
-    if (!['pin', 'psk'].includes(mode))
-        throw new Error('Mode must be either "pin" or "psk".');
+    if (!['pin', 'psk'].includes(mode)) {
+        toast.error('An internal error occurred. Please try again.');
+        console.error('Mode must be either "pin" or "psk".');
+        navigate('/');
+        return <></>;
+    }
 
-    if (mode === 'psk' && !psk)
-        throw new Error('PSK is required when mode is "psk".');
+    if (mode === 'psk' && !psk) {
+        toast.error('An internal error occurred. Please try again.');
+        console.error('PSK is required when mode is "psk".');
+        navigate('/');
+        return <></>;
+    }
 
     const api = new API(hostname, mode as 'pin' | 'psk', psk);
 
@@ -82,31 +95,52 @@ export default function Remote() {
             .then((data) => {
                 setPowerStatus(data.status);
                 setConnected(true);
+                setIntervalId(
+                    setTimeout(() => {
+                        update();
+                    }, 500)
+                );
             })
             .catch((error) => {
                 console.error('Error connecting to TV:', error);
-                alert('Failed to connect to the TV.');
-                setConnected(false);
-                setPowerStatus(null);
+                toast.error('Failed to connect to the TV.');
+                navigate('/');
+                clearInterval(intervalId);
             });
     }
 
-    useEffect(() => {
+    async function connect() {
         if (api.mode === 'pin') {
-            alert('PIN Mode TODO');
+            await api.connect().catch((err) => {
+                if (err.response.status !== 401) {
+                    toast.error('Failed to connect to the TV.');
+                    navigate('/');
+                    return <></>;
+                }
+
+                const pin = prompt('Enter the PIN displayed on your TV:');
+                if (!pin) {
+                    toast.error('Connection cancelled.');
+                    navigate('/');
+                    return <></>;
+                }
+                api.connect(pin, err.clientId).catch((err) => {
+                    console.error('Connection error:', err);
+                    toast.error('Failed to connect to the TV.');
+                    navigate('/');
+                    return <></>;
+                });
+            });
         }
 
         update();
-
-        const interval = setInterval(() => {
-            update();
-        }, 500);
-
-        return () => clearInterval(interval);
+    }
+    useEffect(() => {
+        connect();
     }, []);
 
     return (
-        <div className="w-full max-w-[320px] mx-auto">
+        <div className="w-full max-w-[320px] mx-auto space-y-2">
             <p>{connected ? 'Connected' : 'Not Connected'}</p>
             <div className="bg-gray-900 rounded-3xl p-6 shadow-xl border border-gray-800">
                 {/* Status display */}

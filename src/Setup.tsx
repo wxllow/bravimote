@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { redirect, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { Loader2 } from 'lucide-react';
 
@@ -44,12 +44,13 @@ export default function Pair() {
     return (
         <div className="text-center">
             <h1 className="text-3xl font-bold">Connect Your TV</h1>
-            <p className="text-gray-500 mb-4">
-                Please select your TV from the list below to pair it with
-                Bravimote or connect manually if it is not listed.
+            <p className="text-gray-500 mb-4 max-w-lg">
+                Please select your TV to pair with it. Your TV must be on for
+                the initial pairing. Make sure you are on the same network as
+                your TV.
             </p>
             {/* Device List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="gap-4 mb-4">
                 {devices.length > 0 &&
                     devices.map((device) => (
                         <Button
