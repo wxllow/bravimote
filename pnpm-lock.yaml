@@ -71,6 +71,9 @@ importers:
       tailwindcss:
         specifier: ^4.1.10
         version: 4.1.10
+      tauri-plugin-m3:
+        specifier: ^0.2.2
+        version: 0.2.2
     devDependencies:
       '@eslint/js':
         specifier: ^9.29.0
@@ -1823,6 +1826,9 @@ packages:
     resolution: {integrity: sha512-5S7Va8hKfV7W5U6g3aYxXmlPoZVAwUMy9AOKyF2fVuZa2UD3qZjg578OrLRt8PcNN1PleVaL/5/yYATNL0ICUw==}
     engines: {node: '>=18'}
 
+  tauri-plugin-m3@0.2.2:
+    resolution: {integrity: sha512-soFyj24kKAXdlck9cURxngO2pRw0zx5vF7alDGYTc/AxGQFVTGhmxxyVJBshZGZPDzGq7JYmp2wYgepIN0OerQ==}
+
   tinyglobby@0.2.14:
     resolution: {integrity: sha512-tX5e7OM1HnYr2+a2C/4V0htOcSQcoSTH9KgJnVvNm5zm/cyEWKJ7j7YutsH9CxMdtOkkLFy2AHrMci9IM8IPZQ==}
     engines: {node: '>=12.0.0'}
@@ -3468,6 +3474,10 @@ snapshots:
       minizlib: 3.0.2
       mkdirp: 3.0.1
       yallist: 5.0.0
+
+  tauri-plugin-m3@0.2.2:
+    dependencies:
+      '@tauri-apps/api': 2.8.0
 
   tinyglobby@0.2.14:
     dependencies:

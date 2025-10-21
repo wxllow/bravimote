@@ -46,3 +46,5 @@ reqwest = { version = "0.12.20", default-features = false, features = [
 ssdp-client = "2.1.0"
 url = "2.5.4"
 tauri-plugin-os = "2"
+tauri-plugin-m3 = "0.2.2"
+arp-toolkit = "0.3.2"

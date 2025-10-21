@@ -1,47 +1,82 @@
-type ConfigFields = {
-    hostname: string | null;
-    key: string | null;
-    setup: boolean;
+export type ThemeSetting = string;
+
+export interface Settings {
+    useSystemTheme: boolean;
+    theme: ThemeSetting;
+    vibrantTheme: boolean;
+}
+
+const STORAGE_KEY = 'app.settings.v1';
+
+const defaultSettings: Settings = {
+    useSystemTheme: false,
+    theme: 'teal',
+    vibrantTheme: true
 };
 
-const defaultConfig: ConfigFields = {
-    hostname: null,
-    key: null,
-    setup: false
-};
+let current: Settings | null = null;
 
-class ConfigAPI {
-    private storageKey = 'appConfig';
+type Listener = (settings: Settings) => void;
+const listeners = new Set<Listener>();
 
-    constructor() {
-        if (!localStorage.getItem(this.storageKey)) {
-            this.saveConfig(defaultConfig);
+export function loadSettings(): Settings {
+    if (current) return current;
+
+    return {
+        ...defaultSettings,
+        ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+    };
+}
+
+function notify() {
+    if (!current) return;
+
+    for (const l of [...listeners]) {
+        try {
+            l(current);
+        } catch (err) {
+            console.error(err);
         }
-    }
-
-    private loadConfig(): ConfigFields {
-        const config = localStorage.getItem(this.storageKey);
-        return config ? JSON.parse(config) : { ...defaultConfig };
-    }
-
-    private saveConfig(config: ConfigFields): void {
-        localStorage.setItem(this.storageKey, JSON.stringify(config));
-    }
-
-    get(field: keyof ConfigFields): string | null {
-        const config = this.loadConfig();
-        return config[field];
-    }
-
-    set(field: keyof ConfigFields, value: string | null): void {
-        const config = this.loadConfig();
-        config[field] = value;
-        this.saveConfig(config);
-    }
-
-    reset(): void {
-        this.saveConfig(defaultConfig);
     }
 }
 
-export default new ConfigAPI();
+export interface UpdateSettingsInput {
+    useSystemTheme?: boolean;
+    theme?: ThemeSetting;
+    vibrantTheme?: boolean;
+}
+
+export function updateSettings(patch: UpdateSettingsInput): Settings {
+    const upd = { ...loadSettings(), ...patch };
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(upd));
+    notify();
+
+    return upd;
+}
+
+export function subscribe(listener: Listener): () => void {
+    listeners.add(listener);
+    listener(loadSettings());
+
+    return () => listeners.delete(listener);
+}
+
+import { useEffect, useState } from 'react';
+export function useSettings(): [
+    Settings,
+    (patch: UpdateSettingsInput) => void
+] {
+    const [settings, setSettings] = useState<Settings>(() => loadSettings());
+
+    useEffect(() => {
+        return subscribe(setSettings);
+    }, []);
+
+    const mutate = (patch: UpdateSettingsInput) =>
+        setSettings(updateSettings(patch));
+
+    return [settings, mutate];
+}
+
+export const defaults = Object.freeze({ ...defaultSettings });

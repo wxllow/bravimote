@@ -2,6 +2,8 @@ import axios, { AxiosInstance } from 'axios';
 import axiosTauriApiAdapter from 'axios-tauri-api-adapter';
 import { Code } from './ircc-codes';
 import { fetch } from '@tauri-apps/plugin-http';
+import { SavedDevice } from './types';
+import { invoke } from '@tauri-apps/api/core';
 
 async function generateRandomHex(byteLength: number): Promise<string> {
     const randomBytes = new Uint8Array(byteLength);
@@ -30,7 +32,7 @@ export class RestAPI {
 
         this.axiosInstance = axios.create({
             baseURL,
-            timeout: 5000,
+            timeout: 3000,
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -144,32 +146,41 @@ export class RestAPI {
         // Extract and save the cookie
         const cookie = res.headers.getSetCookie();
 
-        if (cookie) {
-            localStorage.setItem(
-                `device:${this.hostname}`,
-                JSON.stringify({
-                    id: clientId,
-                    cookie,
-                    name: 'Name'
-                })
-            );
+        if (!cookie) {
+            throw {
+                message: 'No cookie received from the TV',
+                response: res
+            };
         }
 
+        localStorage.setItem(
+            `device:${this.hostname}`,
+            JSON.stringify({
+                id: clientId,
+                cookie,
+                model: '',
+                displayName: '',
+                hostname: this.hostname
+            } as SavedDevice)
+        );
+
+        // Fetch and save system info
+
+        const sysInfo = await this.getSystemInfo();
+
+        localStorage.setItem(
+            `device:${this.hostname}`,
+            JSON.stringify({
+                id: clientId,
+                cookie,
+                model: sysInfo.model,
+                displayName: `${sysInfo.name} ${sysInfo.model}`,
+                hostname: this.hostname,
+                macAddress: sysInfo.macAddr || undefined
+            } as SavedDevice)
+        );
+
         return res;
-    }
-
-    async getPowerStatus() {
-        return ((await this._post('system', { method: 'getPowerStatus' })).data
-            .result || [{ status: 'off' }])[0];
-    }
-
-    async setPowerStatus(status: boolean) {
-        return (
-            await this._post('system', {
-                method: 'setPowerStatus',
-                params: [{ status }]
-            })
-        ).data;
     }
 
     async sendIRCC(code: Code) {
@@ -211,6 +222,91 @@ export class RestAPI {
                 params: [text]
             })
         ).data;
+    }
+
+    async getPowerStatus() {
+        return ((await this._post('system', { method: 'getPowerStatus' })).data
+            .result || [{ status: 'off' }])[0];
+    }
+
+    async setPowerStatus(status: boolean) {
+        return (
+            await this._post('system', {
+                method: 'setPowerStatus',
+                params: [{ status }]
+            })
+        ).data;
+    }
+
+    /// Wake device from LAN if possible and device isn't already on.
+    async wakeUp() {
+        const device = JSON.parse(
+            localStorage.getItem(`device:${this.hostname}`) || 'null'
+        ) as SavedDevice | null;
+
+        if (!device?.macAddress) {
+            console.warn('No MAC address found for device, cannot wake up.');
+            return false;
+        }
+
+        let powerStatus = 'active';
+
+        try {
+            let ipAddr = (await invoke('lookup_ip', {
+                mac: device.macAddress
+            })) as string;
+
+            if (ipAddr && ipAddr !== this.hostname) {
+                console.debug(
+                    `Updating device IP from ${this.hostname} to ${ipAddr}`
+                );
+                this.hostname = ipAddr;
+                this.axiosInstance.defaults.baseURL = `http://${ipAddr}/sony/`;
+
+                localStorage.setItem(
+                    `device:${this.hostname}`,
+                    JSON.stringify({
+                        ...device,
+                        hostname: ipAddr
+                    } as SavedDevice)
+                );
+                localStorage.removeItem(`device:${this.hostname}`);
+            }
+        } catch (e) {
+            console.warn('Failed to lookup IP address for device:', e);
+        }
+
+        let startTime = Date.now();
+
+        for (;;) {
+            if (Date.now() - startTime > 15000) {
+                console.warn('WOL timeout reached, giving up.');
+                return false;
+            }
+
+            try {
+                powerStatus = (await this.getPowerStatus()).status;
+
+                console.debug('WOL Got', powerStatus);
+
+                if (powerStatus === 'active') {
+                    return true;
+                }
+
+                await this.setPowerStatus(true);
+
+                throw new Error('Device is off, sending WOL');
+            } catch (error) {
+                console.debug('Sending WOL packet to', device.macAddress);
+                await invoke('send_wol', { mac: device.macAddress });
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+        }
+    }
+
+    async getSystemInfo() {
+        return ((await this._post('system', { method: 'getSystemInformation' }))
+            .data.result || [])[0];
     }
 }
 
