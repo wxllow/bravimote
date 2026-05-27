@@ -1,0 +1,17 @@
+{
+    "name": "Bravimote",
+    "short_name": "Bravimote",
+    "description": "IP Remote control for Brave browser.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#ffffff",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "favicon.png",
+            "sizes": "256x256",
+            "type": "image/png"
+        }
+    ]
+}

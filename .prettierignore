@@ -1,0 +1,12 @@
+# Ignore artifacts:
+node_modules
+dist
+build
+
+# Ignore config files:
+.prettierrc
+.prettierignore
+
+# Ignore lock files:
+package-lock.json
+yarn.lock
